@@ -1,73 +1,72 @@
-//create web server
+//Create web server
 const express = require('express');
 const router = express.Router();
-const passport = require('passport');
-const mongoose = require('mongoose');
-const Post = require('../../models/Post');
-const Profile = require('../../models/Profile');
+//create database connection
+const db = require('../db');
+//create random string for comment id
+const randomstring = require("randomstring");
 
-// @route   GET api/posts/test
-// @desc    Tests posts route
-// @access  Public
-router.get('/test', (req,res) => res.json({msg: "Posts Works"}));
-
-// @route   GET api/posts
-// @desc    Get posts
-// @access  Public
-router.get('/', (req,res) => {
-    Post.find()
-        .sort({date: -1})
-        .then(posts => res.json(posts))
-        .catch(err => res.status(404));
-});
-
-// @route   GET api/posts/:id
-// @desc    Get post by id
-// @access  Public
-router.get('/:id', (req,res) => {
-    Post.findById(req.params.id)
-        .then(post => res.json(post))
-        .catch(err => res.status(404));
-});
-
-// @route   POST api/posts
-// @desc    Create post
-// @access  Private
-router.post('/', passport.authenticate('jwt', {session: false}), (req,res) => {
-
-    //get fields from the form
-    const newPost = new Post({
-        text: req.body.text,
-        name: req.body.name,
-        avatar: req.body.avatar,
-        //user: req.user.id
+//create comment
+router.post('/create', (req, res) => {
+    //create comment id
+    const comment_id = randomstring.generate();
+    //create comment
+    const comment = {
+        comment_id: comment_id,
+        post_id: req.body.post_id,
+        user_id: req.body.user_id,
+        comment: req.body.comment,
+        date: req.body.date
+    }
+    //insert comment into database
+    db.query('INSERT INTO comments SET ?', comment, (err, result) => {
+        if (err) throw err;
+        console.log(result);
+        res.send('Comment created...');
     });
-
-    newPost.save().then(post => res.json(post));
 });
 
-// @route   DELETE api/posts/:id
-// @desc    Delete post by id
-// @access  Private
-router.delete('/:id', passport.authenticate('jwt', {session: false}), (req,res) => {
-    Profile.findOne({user: req.user.id})
-        .then(profile => {
-            Post.findById(req.params.id)
-                .then(post => {
-                    //check for post owner
-                    if(post.user.toString() !== req.user.id){
-                        return res.status(401).json({notauthorized: "User not authorized"});
-                    }
-
-                    //delete
-                    post.remove().then(() => res.json({success: true}));
-                })
-                .catch(err => res.status(404).json({postnotfound: "No post found"}));
-        });
+//get comment by id
+router.get('/:id', (req, res) => {
+    //get comment by id
+    db.query('SELECT * FROM comments WHERE comment_id = ?', [req.params.id], (err, result) => {
+        if (err) throw err;
+        console.log(result);
+        res.send(result);
+    });
 });
 
-// @route   POST api/posts/like/:id
-// @desc    Like post by id
-// @access  Private
-router
+//get comments by post id
+router.get('/post/:id', (req, res) => {
+    //get comments by post id
+    db.query('SELECT * FROM comments WHERE post_id = ?', [req.params.id], (err, result) => {
+        if (err) throw err;
+        console.log(result);
+        res.send(result);
+    });
+});
 
+//get comments by user id
+router.get('/user/:id', (req, res) => {
+    //get comments by user id
+    db.query('SELECT * FROM comments WHERE user_id = ?', [req.params.id], (err, result) => {
+        if (err) throw err;
+        console.log(result);
+        res.send(result);
+    });
+});
+
+//update comment
+router.put('/update/:id', (req, res) => {
+    //update comment
+    db.query('UPDATE comments SET comment = ? WHERE comment_id = ?', [req.body.comment, req.params.id], (err, result) => {
+        if (err) throw err;
+        console.log(result);
+        res.send('Comment updated...');
+    });
+});
+
+//delete comment
+router.delete('/delete/:id', (req, res) => {
+    //delete comment
+    db.query('DELETE FROM
